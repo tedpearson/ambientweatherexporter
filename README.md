@@ -58,6 +58,7 @@ Arguments:
       5. Leave the path as "/data/report/"
       6. All done! Go hit `http://yourip:port/metrics` and you should see your data!
 
+[install-go]: https://golang.org/dl/
 [check]: https://help.ambientweather.net/help/ambient-weather-ws-2000-firmware-download-center/
 [upgrade-hw]: https://help.ambientweather.net/help/how-do-i-update-firmware-ws-2000/
 [upgrade-wifi]: https://help.ambientweather.net/help/how-do-i-update-the-wifi-firmware/
