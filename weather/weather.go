@@ -103,7 +103,6 @@ func (p *Parser) parse(values url.Values) {
 	p.windSpeedMph.WithLabelValues(p.name, "sustained").Set(parseValue("windspeedmph"))
 	p.windSpeedMph.WithLabelValues(p.name, "gusts").Set(parseValue("windgustmph"))
 	p.solarRadiation.WithLabelValues(p.name).Set(parseValue("solarradiation"))
-	p.rainIn.WithLabelValues(p.name, "hourly").Set(parseValue("hourlyrainin"))
 	p.rainIn.WithLabelValues(p.name, "daily").Set(parseValue("dailyrainin"))
 	p.rainIn.WithLabelValues(p.name, "weekly").Set(parseValue("weeklyrainin"))
 	p.rainIn.WithLabelValues(p.name, "monthly").Set(parseValue("monthlyrainin"))
