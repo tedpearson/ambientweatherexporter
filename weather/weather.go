@@ -23,6 +23,7 @@ type Parser struct {
 	windSpeedMph   *prometheus.GaugeVec
 	solarRadiation *prometheus.GaugeVec
 	rainIn         *prometheus.GaugeVec
+	ultraviolet    *prometheus.GaugeVec
 }
 
 func NewParser(name string, factory *promauto.Factory) *Parser {
@@ -36,6 +37,7 @@ func NewParser(name string, factory *promauto.Factory) *Parser {
 		windSpeedMph:   newGauge(factory, "wind_speed_mph", "name", "type"),
 		solarRadiation: newGauge(factory, "solar_radiation", "name"),
 		rainIn:         newGauge(factory, "rain_in", "name", "period"),
+		ultraviolet:    newGauge(factory, "ultraviolet", "name"),
 	}
 }
 
@@ -108,6 +110,7 @@ func (p *Parser) parse(values url.Values) {
 	p.rainIn.WithLabelValues(p.name, "monthly").Set(parseValue("monthlyrainin"))
 	p.rainIn.WithLabelValues(p.name, "yearly").Set(parseValue("yearlyrainin"))
 	p.rainIn.WithLabelValues(p.name, "event").Set(parseValue("eventrainin"))
+	p.ultraviolet.WithLabelValues(p.name).Set(parseValue("uv"))
 }
 
 func calculateWindChill(tempF float64, windSpeedMph float64) float64 {
