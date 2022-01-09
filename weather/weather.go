@@ -3,6 +3,7 @@ package weather
 import (
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -81,10 +82,20 @@ func (p *Parser) parse(values url.Values) {
 	}
 
 	p.temperature.WithLabelValues(p.name, "indoor").Set(parseValue("tempinf"))
-	p.temperature.WithLabelValues(p.name, "outdoor").Set(parseValue("tempf"))
+	tempF := parseValue("tempf")
+	p.temperature.WithLabelValues(p.name, "outdoor").Set(tempF)
 	p.battery.WithLabelValues(p.name, "outdoor").Set(parseValue("battout"))
 	p.battery.WithLabelValues(p.name, "indoor").Set(parseValue("battin"))
-	p.humidity.WithLabelValues(p.name, "outdoor").Set(parseValue("humidity"))
+	humidity := parseValue("humidity")
+	feelsLike := tempF
+	if tempF <= 40 {
+		feelsLike = calculateWindChill(tempF, humidity)
+	}
+	if tempF >= 80 {
+		feelsLike = calculateHeatIndex(tempF, humidity)
+	}
+	p.temperature.WithLabelValues(p.name, "feelsLike").Set(feelsLike)
+	p.humidity.WithLabelValues(p.name, "outdoor").Set(humidity)
 	p.humidity.WithLabelValues(p.name, "indoor").Set(parseValue("humidityin"))
 	p.barometer.WithLabelValues(p.name, "relative").Set(parseValue("baromrelin"))
 	p.barometer.WithLabelValues(p.name, "absolute").Set(parseValue("baromabsin"))
@@ -98,4 +109,38 @@ func (p *Parser) parse(values url.Values) {
 	p.rainIn.WithLabelValues(p.name, "monthly").Set(parseValue("monthlyrainin"))
 	p.rainIn.WithLabelValues(p.name, "yearly").Set(parseValue("yearlyrainin"))
 	p.rainIn.WithLabelValues(p.name, "event").Set(parseValue("eventrainin"))
+}
+
+func calculateWindChill(tempF float64, windSpeedMph float64) float64 {
+	if tempF > 40 || windSpeedMph < 5 {
+		return tempF
+	}
+	windExp := math.Pow(windSpeedMph, 0.16)
+	return 35.74 + (0.6215 * tempF) - (35.75 * windExp) + (0.4275 * tempF * windExp)
+}
+
+// following equation from https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
+func calculateHeatIndex(tempF float64, rh float64) float64 {
+	if tempF < 80 {
+		return tempF
+	}
+	simpleHI := 0.5 * (tempF + 61 + ((tempF - 68) * 1.2) + (rh * .094))
+	if simpleHI < 80 {
+		return simpleHI
+	}
+	hi := -42.379 +
+		2.04901523*tempF +
+		10.14333127*rh -
+		.22475541*tempF*rh -
+		.00683783*tempF*tempF -
+		.05481717*rh*rh +
+		.00122874*tempF*tempF*rh +
+		.00085282*tempF*rh*rh -
+		.00000199*tempF*tempF*rh*rh
+	if rh < 13 && tempF >= 80 && tempF <= 112 {
+		hi = hi - ((13-rh)/4)*math.Sqrt((17-math.Abs(tempF-95))/17)
+	} else if rh > 85 && tempF >= 80 && tempF <= 87 {
+		hi = hi + ((rh-85)/10)*((87-tempF)/5)
+	}
+	return hi
 }
