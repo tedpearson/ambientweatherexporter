@@ -86,24 +86,25 @@ func (p *Parser) parse(values url.Values) {
 	p.temperature.WithLabelValues(p.name, "indoor").Set(parseValue("tempinf"))
 	tempF := parseValue("tempf")
 	p.temperature.WithLabelValues(p.name, "outdoor").Set(tempF)
-	p.battery.WithLabelValues(p.name, "outdoor").Set(parseValue("battout"))
-	p.battery.WithLabelValues(p.name, "indoor").Set(parseValue("battin"))
 	humidity := parseValue("humidity")
+	windSpeedMph := parseValue("windspeedmph")
 	feelsLike := tempF
 	if tempF <= 40 {
-		feelsLike = calculateWindChill(tempF, humidity)
+		feelsLike = calculateWindChill(tempF, windSpeedMph)
 	}
 	if tempF >= 80 {
 		feelsLike = calculateHeatIndex(tempF, humidity)
 	}
 	p.temperature.WithLabelValues(p.name, "feelsLike").Set(feelsLike)
 	p.temperature.WithLabelValues(p.name, "dewpoint").Set(calculateDewPoint(tempF, humidity))
+	p.battery.WithLabelValues(p.name, "outdoor").Set(parseValue("battout"))
+	p.battery.WithLabelValues(p.name, "indoor").Set(parseValue("battin"))
 	p.humidity.WithLabelValues(p.name, "outdoor").Set(humidity)
 	p.humidity.WithLabelValues(p.name, "indoor").Set(parseValue("humidityin"))
 	p.barometer.WithLabelValues(p.name, "relative").Set(parseValue("baromrelin"))
 	p.barometer.WithLabelValues(p.name, "absolute").Set(parseValue("baromabsin"))
 	p.windDir.WithLabelValues(p.name).Set(parseValue("winddir"))
-	p.windSpeedMph.WithLabelValues(p.name, "sustained").Set(parseValue("windspeedmph"))
+	p.windSpeedMph.WithLabelValues(p.name, "sustained").Set(windSpeedMph)
 	p.windSpeedMph.WithLabelValues(p.name, "gusts").Set(parseValue("windgustmph"))
 	p.solarRadiation.WithLabelValues(p.name).Set(parseValue("solarradiation"))
 	p.rainIn.WithLabelValues(p.name, "daily").Set(parseValue("dailyrainin"))
