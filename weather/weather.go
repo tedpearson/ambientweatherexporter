@@ -97,6 +97,7 @@ func (p *Parser) parse(values url.Values) {
 		feelsLike = calculateHeatIndex(tempF, humidity)
 	}
 	p.temperature.WithLabelValues(p.name, "feelsLike").Set(feelsLike)
+	p.temperature.WithLabelValues(p.name, "dewpoint").Set(calculateDewPoint(tempF, humidity))
 	p.humidity.WithLabelValues(p.name, "outdoor").Set(humidity)
 	p.humidity.WithLabelValues(p.name, "indoor").Set(parseValue("humidityin"))
 	p.barometer.WithLabelValues(p.name, "relative").Set(parseValue("baromrelin"))
@@ -145,4 +146,12 @@ func calculateHeatIndex(tempF float64, rh float64) float64 {
 		hi = hi + ((rh-85)/10)*((87-tempF)/5)
 	}
 	return hi
+}
+
+func calculateDewPoint(tempF float64, rh float64) float64 {
+	a := 17.625
+	b := 243.04
+	t := (tempF - 32) * 5 / 9
+	alpha := math.Log(rh/100) + ((a * t) / (b + t))
+	return (b * alpha / (a - alpha) * 9 / 5) + 32
 }
