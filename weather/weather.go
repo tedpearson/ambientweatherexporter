@@ -84,7 +84,7 @@ func (p *Parser) parse(values url.Values) {
 			p.battery.WithLabelValues(p.name, iStr).Set(parseValue("batt" + iStr))
 		}
 		if values.Has("soilhum" + iStr) {
-			p.humidity.WithLabelValues(p.name, iStr).Set(parseValue("soilhum" + iStr))
+			p.humidity.WithLabelValues(p.name, "soil"+iStr).Set(parseValue("soilhum" + iStr))
 			p.battery.WithLabelValues(p.name, "soil"+iStr).Set(parseValue("battsm" + iStr))
 		}
 		if values.Has("humidity" + iStr) {
