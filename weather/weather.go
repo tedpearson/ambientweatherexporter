@@ -77,10 +77,19 @@ func (p *Parser) parse(values url.Values) {
 		return value
 	}
 
-	for i := 1; values.Has(fmt.Sprintf("temp%df", i)); i++ {
+	for i := 1; i <= 10; i++ {
 		iStr := strconv.Itoa(i)
-		p.battery.WithLabelValues(p.name, iStr).Set(parseValue(fmt.Sprintf("batt%d", i)))
-		p.temperature.WithLabelValues(p.name, iStr).Set(parseValue(fmt.Sprintf("temp%df", i)))
+		if values.Has(fmt.Sprintf("temp%df", i)) {
+			p.temperature.WithLabelValues(p.name, iStr).Set(parseValue(fmt.Sprintf("temp%df", i)))
+			p.battery.WithLabelValues(p.name, iStr).Set(parseValue("batt" + iStr))
+		}
+		if values.Has("soilhum" + iStr) {
+			p.humidity.WithLabelValues(p.name, iStr).Set(parseValue("soilhum" + iStr))
+			p.battery.WithLabelValues(p.name, "soil"+iStr).Set(parseValue("battsm" + iStr))
+		}
+		if values.Has("humidity" + iStr) {
+			p.humidity.WithLabelValues(p.name, iStr).Set(parseValue("humidity" + iStr))
+		}
 	}
 
 	p.temperature.WithLabelValues(p.name, "indoor").Set(parseValue("tempinf"))
