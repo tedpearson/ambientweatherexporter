@@ -98,18 +98,18 @@ func (p *Parser) parse(values url.Values) {
 
 	updateGauge(p.temperature.WithLabelValues(p.name, "indoor"))(parseValue("tempinf"))
 	tempF, err := parseValue("tempf")
-	if err != nil {
+	if err == nil {
 		p.temperature.WithLabelValues(p.name, "outdoor").Set(tempF)
 		feelsLike := tempF
 		windSpeedMph, err := parseValue("windspeedmph")
-		if err != nil {
+		if err == nil {
 			p.windSpeedMph.WithLabelValues(p.name, "sustained").Set(windSpeedMph)
 			if tempF <= 40 {
 				feelsLike = calculateWindChill(tempF, windSpeedMph)
 			}
 		}
 		humidity, err := parseValue("humidity")
-		if err != nil {
+		if err == nil {
 			p.humidity.WithLabelValues(p.name, "outdoor").Set(humidity)
 			p.temperature.WithLabelValues(p.name, "dewpoint").Set(calculateDewPoint(tempF, humidity))
 			if tempF >= 80 {
