@@ -67,61 +67,80 @@ func (p *Parser) parse(values url.Values) {
 			log.Printf("Failed to parse incoming request: %+v", r)
 		}
 	}()
-	parseValue := func(name string) float64 {
-		array := values[name]
+	parseValue := func(name string) (float64, error) {
+		array, ok := values[name]
+		if !ok {
+			return 0, fmt.Errorf("no such param: %s", name)
+		}
 		value, err := strconv.ParseFloat(array[0], 64)
 		if err != nil {
-			log.Printf("Failed to parse value: '%s': %+v", array[0], err)
-			return 0
+			e := fmt.Errorf("failed to parse value: '%s': %+v", array[0], err)
+			log.Println(e)
+			return 0, e
 		}
-		return value
+		return value, nil
 	}
 
 	for i := 1; i <= 10; i++ {
 		iStr := strconv.Itoa(i)
 		if values.Has(fmt.Sprintf("temp%df", i)) {
-			p.temperature.WithLabelValues(p.name, iStr).Set(parseValue(fmt.Sprintf("temp%df", i)))
-			p.battery.WithLabelValues(p.name, iStr).Set(parseValue("batt" + iStr))
+			updateGauge(p.temperature.WithLabelValues(p.name, iStr))(parseValue(fmt.Sprintf("temp%df", i)))
+			updateGauge(p.battery.WithLabelValues(p.name, iStr))(parseValue("batt" + iStr))
 		}
 		if values.Has("soilhum" + iStr) {
-			p.humidity.WithLabelValues(p.name, "soil"+iStr).Set(parseValue("soilhum" + iStr))
-			p.battery.WithLabelValues(p.name, "soil"+iStr).Set(parseValue("battsm" + iStr))
+			updateGauge(p.humidity.WithLabelValues(p.name, "soil"+iStr))(parseValue("soilhum" + iStr))
+			updateGauge(p.battery.WithLabelValues(p.name, "soil"+iStr))(parseValue("battsm" + iStr))
 		}
 		if values.Has("humidity" + iStr) {
-			p.humidity.WithLabelValues(p.name, iStr).Set(parseValue("humidity" + iStr))
+			updateGauge(p.humidity.WithLabelValues(p.name, iStr))(parseValue("humidity" + iStr))
 		}
 	}
 
-	p.temperature.WithLabelValues(p.name, "indoor").Set(parseValue("tempinf"))
-	tempF := parseValue("tempf")
-	p.temperature.WithLabelValues(p.name, "outdoor").Set(tempF)
-	humidity := parseValue("humidity")
-	windSpeedMph := parseValue("windspeedmph")
-	feelsLike := tempF
-	if tempF <= 40 {
-		feelsLike = calculateWindChill(tempF, windSpeedMph)
+	updateGauge(p.temperature.WithLabelValues(p.name, "indoor"))(parseValue("tempinf"))
+	tempF, err := parseValue("tempf")
+	if err != nil {
+		p.temperature.WithLabelValues(p.name, "outdoor").Set(tempF)
+		feelsLike := tempF
+		windSpeedMph, err := parseValue("windspeedmph")
+		if err != nil {
+			p.windSpeedMph.WithLabelValues(p.name, "sustained").Set(windSpeedMph)
+			if tempF <= 40 {
+				feelsLike = calculateWindChill(tempF, windSpeedMph)
+			}
+		}
+		humidity, err := parseValue("humidity")
+		if err != nil {
+			p.humidity.WithLabelValues(p.name, "outdoor").Set(humidity)
+			p.temperature.WithLabelValues(p.name, "dewpoint").Set(calculateDewPoint(tempF, humidity))
+			if tempF >= 80 {
+				feelsLike = calculateHeatIndex(tempF, humidity)
+			}
+		}
+		p.temperature.WithLabelValues(p.name, "feelsLike").Set(feelsLike)
 	}
-	if tempF >= 80 {
-		feelsLike = calculateHeatIndex(tempF, humidity)
+
+	updateGauge(p.battery.WithLabelValues(p.name, "outdoor"))(parseValue("battout"))
+	updateGauge(p.battery.WithLabelValues(p.name, "indoor"))(parseValue("battin"))
+	updateGauge(p.humidity.WithLabelValues(p.name, "indoor"))(parseValue("humidityin"))
+	updateGauge(p.barometer.WithLabelValues(p.name, "relative"))(parseValue("baromrelin"))
+	updateGauge(p.barometer.WithLabelValues(p.name, "absolute"))(parseValue("baromabsin"))
+	updateGauge(p.windDir.WithLabelValues(p.name))(parseValue("winddir"))
+	updateGauge(p.windSpeedMph.WithLabelValues(p.name, "gusts"))(parseValue("windgustmph"))
+	updateGauge(p.solarRadiation.WithLabelValues(p.name))(parseValue("solarradiation"))
+	updateGauge(p.rainIn.WithLabelValues(p.name, "daily"))(parseValue("dailyrainin"))
+	updateGauge(p.rainIn.WithLabelValues(p.name, "weekly"))(parseValue("weeklyrainin"))
+	updateGauge(p.rainIn.WithLabelValues(p.name, "monthly"))(parseValue("monthlyrainin"))
+	updateGauge(p.rainIn.WithLabelValues(p.name, "yearly"))(parseValue("yearlyrainin"))
+	updateGauge(p.rainIn.WithLabelValues(p.name, "event"))(parseValue("eventrainin"))
+	updateGauge(p.ultraviolet.WithLabelValues(p.name))(parseValue("uv"))
+}
+
+func updateGauge(gauge prometheus.Gauge) func(float64, error) {
+	return func(value float64, err error) {
+		if err == nil {
+			gauge.Set(value)
+		}
 	}
-	p.temperature.WithLabelValues(p.name, "feelsLike").Set(feelsLike)
-	p.temperature.WithLabelValues(p.name, "dewpoint").Set(calculateDewPoint(tempF, humidity))
-	p.battery.WithLabelValues(p.name, "outdoor").Set(parseValue("battout"))
-	p.battery.WithLabelValues(p.name, "indoor").Set(parseValue("battin"))
-	p.humidity.WithLabelValues(p.name, "outdoor").Set(humidity)
-	p.humidity.WithLabelValues(p.name, "indoor").Set(parseValue("humidityin"))
-	p.barometer.WithLabelValues(p.name, "relative").Set(parseValue("baromrelin"))
-	p.barometer.WithLabelValues(p.name, "absolute").Set(parseValue("baromabsin"))
-	p.windDir.WithLabelValues(p.name).Set(parseValue("winddir"))
-	p.windSpeedMph.WithLabelValues(p.name, "sustained").Set(windSpeedMph)
-	p.windSpeedMph.WithLabelValues(p.name, "gusts").Set(parseValue("windgustmph"))
-	p.solarRadiation.WithLabelValues(p.name).Set(parseValue("solarradiation"))
-	p.rainIn.WithLabelValues(p.name, "daily").Set(parseValue("dailyrainin"))
-	p.rainIn.WithLabelValues(p.name, "weekly").Set(parseValue("weeklyrainin"))
-	p.rainIn.WithLabelValues(p.name, "monthly").Set(parseValue("monthlyrainin"))
-	p.rainIn.WithLabelValues(p.name, "yearly").Set(parseValue("yearlyrainin"))
-	p.rainIn.WithLabelValues(p.name, "event").Set(parseValue("eventrainin"))
-	p.ultraviolet.WithLabelValues(p.name).Set(parseValue("uv"))
 }
 
 func calculateWindChill(tempF float64, windSpeedMph float64) float64 {
