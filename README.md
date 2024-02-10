@@ -35,6 +35,7 @@ Arguments:
 - `--port` port to listen for ambient weather requests and prometheus scrapes
 - `--station-name` the name of your weather station,
   which will populate the "name" label in the time series.
+- `-v` run `./ambientweatherexporter -v` to see the version and build information.
 
 ## How to configure a WS-2000 station to send http requests
 
