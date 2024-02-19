@@ -69,12 +69,14 @@ func (p *Parser) parse(values url.Values) {
 	}()
 	parseValue := func(name string) (float64, error) {
 		array, ok := values[name]
+		first := strings.ReplaceAll(array[0], "\n", "")
+		first = strings.ReplaceAll(first, "\r", "")
 		if !ok {
 			return 0, fmt.Errorf("no such param: %s", name)
 		}
-		value, err := strconv.ParseFloat(array[0], 64)
+		value, err := strconv.ParseFloat(first, 64)
 		if err != nil {
-			e := fmt.Errorf("failed to parse value: '%s': %+v", array[0], err)
+			e := fmt.Errorf("failed to parse value: '%s': %+v", first, err)
 			log.Println(e)
 			return 0, e
 		}
