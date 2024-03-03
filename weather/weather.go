@@ -58,10 +58,10 @@ func (p *Parser) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Printf("Failed to parse weather observation from request url: %+v", err)
 	}
-	p.parse(values)
+	p.Parse(values)
 }
 
-func (p *Parser) parse(values url.Values) {
+func (p *Parser) Parse(values url.Values) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Failed to parse incoming request: %+v", r)
@@ -69,11 +69,11 @@ func (p *Parser) parse(values url.Values) {
 	}()
 	parseValue := func(name string) (float64, error) {
 		array, ok := values[name]
-		first := strings.ReplaceAll(array[0], "\n", "")
-		first = strings.ReplaceAll(first, "\r", "")
 		if !ok {
 			return 0, fmt.Errorf("no such param: %s", name)
 		}
+		first := strings.ReplaceAll(array[0], "\n", "")
+		first = strings.ReplaceAll(first, "\r", "")
 		value, err := strconv.ParseFloat(first, 64)
 		if err != nil {
 			e := fmt.Errorf("failed to parse value: '%s': %+v", first, err)
