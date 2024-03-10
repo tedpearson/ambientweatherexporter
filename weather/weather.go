@@ -88,13 +88,21 @@ func (p *Parser) Parse(values url.Values) {
 		if values.Has(fmt.Sprintf("temp%df", i)) {
 			updateGauge(p.temperature.WithLabelValues(p.name, iStr))(parseValue(fmt.Sprintf("temp%df", i)))
 			updateGauge(p.battery.WithLabelValues(p.name, iStr))(parseValue("batt" + iStr))
+		} else {
+			p.battery.DeleteLabelValues(p.name, iStr)
+			p.temperature.DeleteLabelValues(p.name, iStr)
 		}
 		if values.Has("soilhum" + iStr) {
 			updateGauge(p.humidity.WithLabelValues(p.name, "soil"+iStr))(parseValue("soilhum" + iStr))
 			updateGauge(p.battery.WithLabelValues(p.name, "soil"+iStr))(parseValue("battsm" + iStr))
+		} else {
+			p.humidity.DeleteLabelValues(p.name, "soil"+iStr)
+			p.battery.DeleteLabelValues(p.name, "soil"+iStr)
 		}
 		if values.Has("humidity" + iStr) {
 			updateGauge(p.humidity.WithLabelValues(p.name, iStr))(parseValue("humidity" + iStr))
+		} else {
+			p.humidity.DeleteLabelValues(p.name, iStr)
 		}
 	}
 
