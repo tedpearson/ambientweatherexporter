@@ -24,6 +24,8 @@ type Parser struct {
 	solarRadiation *prometheus.GaugeVec
 	rainIn         *prometheus.GaugeVec
 	ultraviolet    *prometheus.GaugeVec
+	lightning      *prometheus.GaugeVec
+	stationtype    *prometheus.GaugeVec
 }
 
 func NewParser(name string, factory *promauto.Factory) *Parser {
@@ -33,11 +35,13 @@ func NewParser(name string, factory *promauto.Factory) *Parser {
 		battery:        newGauge(factory, "battery", "name", "sensor"),
 		humidity:       newGauge(factory, "humidity", "name", "sensor"),
 		barometer:      newGauge(factory, "barometer", "name", "type"),
-		windDir:        newGauge(factory, "wind_dir", "name"),
+		windDir:        newGauge(factory, "wind_dir", "name", "period"),
 		windSpeedMph:   newGauge(factory, "wind_speed_mph", "name", "type"),
 		solarRadiation: newGauge(factory, "solar_radiation", "name"),
 		rainIn:         newGauge(factory, "rain_in", "name", "period"),
 		ultraviolet:    newGauge(factory, "ultraviolet", "name"),
+		lightning:      newGauge(factory, "lightning", "name", "period"),
+		stationtype:    newGauge(factory, "stationtype_info", "name", "type"),
 	}
 }
 
@@ -67,6 +71,18 @@ func (p *Parser) Parse(values url.Values) {
 			log.Printf("Failed to parse incoming request: %+v", r)
 		}
 	}()
+
+	parseString := func(name string) (string, error) {
+                array, ok := values[name]
+                if !ok {
+                        return "", fmt.Errorf("no such param: %s", name)
+                }
+		str := strings.ReplaceAll(array[0], "\n", "")
+		str = strings.ReplaceAll(str, "\r", "")
+
+		return str, nil
+	}
+
 	parseValue := func(name string) (float64, error) {
 		array, ok := values[name]
 		if !ok {
@@ -131,10 +147,12 @@ func (p *Parser) Parse(values url.Values) {
 
 	updateGauge(p.battery.WithLabelValues(p.name, "outdoor"))(parseValue("battout"))
 	updateGauge(p.battery.WithLabelValues(p.name, "indoor"))(parseValue("battin"))
+	updateGauge(p.battery.WithLabelValues(p.name, "lightning"))(parseValue("batt_lightning"))
 	updateGauge(p.humidity.WithLabelValues(p.name, "indoor"))(parseValue("humidityin"))
 	updateGauge(p.barometer.WithLabelValues(p.name, "relative"))(parseValue("baromrelin"))
 	updateGauge(p.barometer.WithLabelValues(p.name, "absolute"))(parseValue("baromabsin"))
-	updateGauge(p.windDir.WithLabelValues(p.name))(parseValue("winddir"))
+	updateGauge(p.windDir.WithLabelValues(p.name, "current"))(parseValue("winddir"))
+	updateGauge(p.windDir.WithLabelValues(p.name, "avg10m"))(parseValue("winddir_avg10m"))
 	updateGauge(p.windSpeedMph.WithLabelValues(p.name, "gusts"))(parseValue("windgustmph"))
 	updateGauge(p.solarRadiation.WithLabelValues(p.name))(parseValue("solarradiation"))
 	updateGauge(p.rainIn.WithLabelValues(p.name, "daily"))(parseValue("dailyrainin"))
@@ -143,6 +161,12 @@ func (p *Parser) Parse(values url.Values) {
 	updateGauge(p.rainIn.WithLabelValues(p.name, "yearly"))(parseValue("yearlyrainin"))
 	updateGauge(p.rainIn.WithLabelValues(p.name, "event"))(parseValue("eventrainin"))
 	updateGauge(p.ultraviolet.WithLabelValues(p.name))(parseValue("uv"))
+	updateGauge(p.lightning.WithLabelValues(p.name, "day"))(parseValue("lightning_day"))
+
+	stationType, station_err := parseString("stationtype")
+	if err == station_err {
+		updateGauge(p.stationtype.WithLabelValues(p.name, stationType))(float64(1), nil)
+	}
 }
 
 func updateGauge(gauge prometheus.Gauge) func(float64, error) {
