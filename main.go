@@ -21,6 +21,8 @@ var (
 
 func main() {
 	port := flag.Int("port", 2184, "Http server port to listen on")
+	prefix := flag.String("prefix", "",
+		"add metrics prefix %s_(metric_name)" )
 	name := flag.String("station-name", "Unknown",
 		"Weather station name for the 'name' label on the metrics")
 	versionFlag := flag.Bool("v", false, "Show version and exit")
@@ -31,7 +33,7 @@ func main() {
 	}
 	registry := prometheus.NewRegistry()
 	factory := promauto.With(registry)
-	http.Handle("/data/report/", weather.NewParser(*name, &factory))
+	http.Handle("/data/report/", weather.NewParser(*name, *prefix, &factory))
 	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	if err != nil {

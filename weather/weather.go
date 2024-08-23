@@ -15,6 +15,7 @@ import (
 
 type Parser struct {
 	name           string
+	metric_prefix    string
 	temperature    *prometheus.GaugeVec
 	battery        *prometheus.GaugeVec // 1 = ok; 0 = low
 	humidity       *prometheus.GaugeVec
@@ -28,20 +29,26 @@ type Parser struct {
 	stationtype    *prometheus.GaugeVec
 }
 
-func NewParser(name string, factory *promauto.Factory) *Parser {
+func NewParser(name string, prefix string, factory *promauto.Factory) *Parser {
+	metric_prefix := ""
+	if prefix != "" {
+		metric_prefix = prefix + "_"
+	}
+
 	return &Parser{
 		name:           name,
-		temperature:    newGauge(factory, "temperature", "name", "sensor"),
-		battery:        newGauge(factory, "battery", "name", "sensor"),
-		humidity:       newGauge(factory, "humidity", "name", "sensor"),
-		barometer:      newGauge(factory, "barometer", "name", "type"),
-		windDir:        newGauge(factory, "wind_dir", "name", "period"),
-		windSpeedMph:   newGauge(factory, "wind_speed_mph", "name", "type"),
-		solarRadiation: newGauge(factory, "solar_radiation", "name"),
-		rainIn:         newGauge(factory, "rain_in", "name", "period"),
-		ultraviolet:    newGauge(factory, "ultraviolet", "name"),
-		lightning:      newGauge(factory, "lightning", "name", "period"),
-		stationtype:    newGauge(factory, "stationtype_info", "name", "type"),
+		metric_prefix:  metric_prefix,
+		temperature:    newGauge(factory, metric_prefix + "temperature", "name", "sensor"),
+		battery:        newGauge(factory, metric_prefix + "battery", "name", "sensor"),
+		humidity:       newGauge(factory, metric_prefix + "humidity", "name", "sensor"),
+		barometer:      newGauge(factory, metric_prefix + "barometer", "name", "type"),
+		windDir:        newGauge(factory, metric_prefix + "wind_dir", "name", "period"),
+		windSpeedMph:   newGauge(factory, metric_prefix + "wind_speed_mph", "name", "type"),
+		solarRadiation: newGauge(factory, metric_prefix + "solar_radiation", "name"),
+		rainIn:         newGauge(factory, metric_prefix + "rain_in", "name", "period"),
+		ultraviolet:    newGauge(factory, metric_prefix + "ultraviolet", "name"),
+		lightning:      newGauge(factory, metric_prefix + "lightning", "name", "period"),
+		stationtype:    newGauge(factory, metric_prefix + "stationtype_info", "name", "type"),
 	}
 }
 
