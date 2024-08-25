@@ -47,7 +47,7 @@ func NewParser(name string, prefix string, factory *promauto.Factory) *Parser {
 		solarRadiation: newGauge(factory, metric_prefix + "solar_radiation", "name"),
 		rainIn:         newGauge(factory, metric_prefix + "rain_in", "name", "period"),
 		ultraviolet:    newGauge(factory, metric_prefix + "ultraviolet", "name"),
-		lightning:      newGauge(factory, metric_prefix + "lightning", "name", "period"),
+		lightning:      newGauge(factory, metric_prefix + "lightning", "name", "period", "type"),
 		stationtype:    newGauge(factory, metric_prefix + "stationtype_info", "name", "type"),
 	}
 }
@@ -170,7 +170,9 @@ func (p *Parser) Parse(values url.Values) {
 	updateGauge(p.rainIn.WithLabelValues(p.name, "total"))(parseValue("totalrainin"))
 	updateGauge(p.rainIn.WithLabelValues(p.name, "event"))(parseValue("eventrainin"))
 	updateGauge(p.ultraviolet.WithLabelValues(p.name))(parseValue("uv"))
-	updateGauge(p.lightning.WithLabelValues(p.name, "day"))(parseValue("lightning_day"))
+	updateGauge(p.lightning.WithLabelValues(p.name, "day", "total"))(parseValue("lightning_day"))
+	updateGauge(p.lightning.WithLabelValues(p.name, "last", "distance"))(parseValue("lightning_distance"))
+	updateGauge(p.lightning.WithLabelValues(p.name, "last", "time"))(parseValue("lightning_time"))
 
 	stationType, station_err := parseString("stationtype")
 	if err == station_err {
